@@ -1,0 +1,8 @@
+__pycache__/
+drc_venv/
+working/
+RW_*/
+DWS_xls/
+WZ_*/
+compare_results/
+githubtoken.txt

@@ -2,8 +2,6 @@ import re
 import os
 import glob
 import json
-import locale
-import pandas as pd
 
 
 RW_TXT_FOLDER = "RW_txt/"
@@ -31,8 +29,8 @@ def get_text_filename_list(path: str) -> list[str]:
     return glob.glob(os.path.join(path, "*.txt"))
 
 
-def get_json_file_name(rw_dir: str, rw_number: str) -> str:
-    return os.path.join(rw_dir, rw_number.replace("/","_")+".json")
+def get_json_file_name(out_dir: str, out_number: str) -> str:
+    return os.path.join(out_dir, out_number.replace("/","_")+".json")
 
 
 def save_json(_dict: dict, filename: str):
@@ -49,11 +47,13 @@ def decode_rw_number(source: str) -> str:
 
 
 def decode_dws_numbers(source: str) -> list[str]:
-    return re.findall(PATTERN_DWS, source)
+    tmp = re.findall(PATTERN_DWS, source)
+    return [re.findall(r"\d\d\d/22", tmp_item)[0] for tmp_item in tmp]
 
 
 def decode_wz_numbers(source: str) -> list[str]:
-    return re.findall(PATTERN_WZ, source)
+    tmp = re.findall(PATTERN_WZ, source)
+    return [re.findall(r"\d+/\d\d/22/6", tmp_item)[0] for tmp_item in tmp]
 
 
 def is_index(source_line: str) -> bool:
@@ -97,9 +97,9 @@ def get_prizes(source_line: str) -> list[float, float]:
 def decode_item(source_line: str) -> dict:
     item = {}
     item["index"] = get_index(source_line)
-    item["count"] = get_count(source_line)
+    item["quantity"] = get_count(source_line)
     item["prizes"] = get_prizes(source_line)
-    item["count_by_prizes"] = item["prizes"][1] / item["prizes"][0]
+    item["quantity_by_prizes"] = item["prizes"][1] / item["prizes"][0]
     item["verified"] = item["count"] == item["count_by_prizes"]
     return item
 
@@ -115,37 +115,9 @@ def compose_rw(rw_raw_text: str) -> dict:
 
 def main():
     files_list = get_text_filename_list(RW_TXT_FOLDER)
-    example_text = get_text_from_file(files_list[0])
-
     for file in files_list:
         rw_dict = compose_rw(get_text_from_file(file))
         save_json(rw_dict, get_json_file_name(RW_JSON_FOLDER, rw_dict["RW_document"]))
-
-    
-    # print(example_text)
-    # pattern_RW = r"RW/U\d+/22"
-    # rw = re.findall(pattern_RW, example_text)
-    # print(rw)
-    # pattern_DWS = r"DWS\s?\d\d\d/22"
-    # dws = re.findall(pattern_DWS, example_text)
-    # print(dws)
-    # pattern_WZ = r"WZ\s?\d\d\d/\d\d/22/6"
-    # wz = re.findall(pattern_WZ, example_text)
-    # print(wz)
-    # pattern_index = r"\d\d\d\d\sJ"
-    # indexes = re.findall(pattern_index, example_text)
-    # print(indexes, len(indexes))
-    # pattern_count = r"\d+\s?SZT"
-    # counts = re.findall(pattern_count, example_text)
-    # print(counts, len(counts))
-    # pattern_prizes = r"[0-9]+[\.,][0-9]+\s[0-9]*.*[0-9]+[\.,][0-9]+"
-    # # pattern_prizes = r"[0-9]+\.[0-9]+"
-    # prizes = re.findall(pattern_prizes, example_text)
-    # print(prizes, len(prizes))
-    # pattern_prizes = r"[0-9]*\s*[0-9]+[\.,][0-9]+"
-    # # pattern_prizes = r"[0-9]+\.[0-9]+"
-    # prizes = re.findall(pattern_prizes, example_text)
-    # print(prizes, len(prizes))
 
 
 if __name__ == "__main__":
