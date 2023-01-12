@@ -1,21 +1,13 @@
 import os
-import pandas as pd
 import xlrd
 import re
 from tqdm import tqdm
 from decodetxt2rw import get_json_file_name, save_json
-from time import sleep
 
 
 DWS_XLS_FOLDER = "DWS_xls/"
 WZ_JSON_FOLDER = "WZ_json/"
-OUTPUT_FOLDER = "compare_result/"
 
-
-def get_assortment_pandas(xls_file_name: str) -> pd.DataFrame:
-    with pd.ExcelFile(xls_file_name) as xls:
-        assortment_DF = pd.read_excel(xls, sheet_name="Asortyment", usecols="D,M", keep_default_na=True)
-    return assortment_DF
 
 
 def get_assortment(xls_book: xlrd.book.Book, names_col_number=3, indexes_col_number=12) -> dict:
@@ -88,7 +80,6 @@ def get_wz_content(assortment_dict: dict, dws_sheet: xlrd.sheet.Sheet, start_row
                 wz_number = wz_tmp_number
             count = int(row[-1])
             wz_content_list.append(compose_wz_item(assortment_dict, str(row[1]), count))
-            # print(row[0], row[1], int(row[-1]))
         except ValueError:
             pass
         sr += 1
@@ -101,11 +92,7 @@ def get_wz_content(assortment_dict: dict, dws_sheet: xlrd.sheet.Sheet, start_row
 
 
 def main():
-    # df = get_assortment(os.path.join(DWS_XLS_FOLDER, "Asortyment v1 2021.xls"))
-    # sd = df.to_dict(orient='split')
-    # ass_dict = {k: v for k, v in sd['data'] if pd.notna(k) and pd.notna(v)}
-    # print(ass_dict)
-    print("Reading assotrment list...", end="")
+    print("Reading assortment list...", end="")
     assortment_book = get_xls_book(os.path.join(DWS_XLS_FOLDER, "Asortyment v1 2022.xls"))
     assortment_dict = get_assortment(assortment_book)
     print("done.")
@@ -113,22 +100,14 @@ def main():
     dws_book = get_xls_book(os.path.join(DWS_XLS_FOLDER, "DWSygn v1 2022.xls"))
     dws_list = get_dws_sheet_list(dws_book)
     print("done.")
-    # dws = get_dws_sheet(dws_book, "076_22")
-    # content_list = [get_wz_content(assortment_dict, dws, start_row=sr) for sr in get_wz_start(dws)]
-    # for n in content_list:
-    #     print(n)
-    #     print("\n\n")
-    print("start")
-    t = tqdm(total=len(dws_list), unit=" DWS")
+    t = tqdm(total=len(dws_list), unit=" DWS", desc="Extracting WZ")
     for dws_name in dws_list:
         dws_sheet = get_dws_sheet(dws_book, dws_name)
         wz_list = [get_wz_content(assortment_dict, dws_sheet, start_row=sr) for sr in get_wz_start(dws_sheet)]
         for wz in wz_list:
             save_json(wz, get_json_file_name(WZ_JSON_FOLDER,"WZ_"+wz["WZ_number"]))
         t.update(n=1)
-        # sleep(0.1)
     t.close()
-
 
 
 if __name__ == "__main__":
