@@ -1,6 +1,10 @@
 import json
-from decodetxt2rw import get_filename_list, RW_JSON_FOLDER
-from decodexls2wz import WZ_JSON_FOLDER
+import os
+
+import click
+from decodetxt2rw import get_files
+from globals import RW_JSON_FOLDER, \
+                    WZ_JSON_FOLDER
 
 
 OUTPUT_FOLDER = "compare_result/"
@@ -13,12 +17,11 @@ class CompareSet():
     
 
     def compose_wz_dict(self, wz_list: list, wz_data: dict) -> None:
-        self.wz_list = wz_list
         self.wz_dict = dict()
         self.wz_dict["WZ_numbers"] = []
         self.wz_dict["DWS_numbers"] = []
         self.wz_dict["items"] = dict()
-        for wz in self.wz_list:
+        for wz in sorted(wz_list):
             try:    
                 self.wz_dict["WZ_numbers"].append(wz)
                 self.wz_dict["DWS_numbers"].append(wz_data[wz]["DWS_number"])
@@ -29,14 +32,14 @@ class CompareSet():
             except KeyError:
                 self.wz_dict["WZ_numbers"].remove(wz)
                 self.wz_dict["WZ_numbers"].append("Nie znaleziono WZ: "+wz)
+        self.wz_dict["DWS_numbers"] = sorted(self.wz_dict["DWS_numbers"])
 
 
     def compose_rw_dict(self, rw_list: list, rw_data: dict) -> None:
-        self.rw_list = rw_list
         self.rw_dict = dict()
         self.rw_dict["RW_numbers"] = []
         self.rw_dict["items"] = dict()
-        for rw in self.rw_list:
+        for rw in sorted(rw_list):
             self.rw_dict["RW_numbers"].append(rw)
             for item in rw_data[rw]["items"]:
                 self.rw_dict["items"][item["index"]] = self.rw_dict["items"].get(item["index"], int(0)) + item["quantity"]
@@ -44,9 +47,9 @@ class CompareSet():
 
     def compare(self) -> str:
         self.comparision_result = "{:*<150}\n".format("")
-        self.comparision_result += ("WZ-ty  : " + str(self.wz_list) + "\n")
+        self.comparision_result += ("WZ-ty  : " + str(self.wz_dict["WZ_numbers"]) + "\n")
         self.comparision_result += ("DWSygn : " + str(self.wz_dict["DWS_numbers"]) + "\n")
-        self.comparision_result += ("RW     : " + str(self.rw_list) + "\n")
+        self.comparision_result += ("RW     : " + str(self.rw_dict["RW_numbers"]) + "\n")
         self.comparision_result += "{:-<150}\n".format("")
         self.comparision_result += " STATUS   INDEX   ILOŚĆ (WZ)  ILOŚĆ (RW)  NAZWA TOWARU\n"
         self.comparision_result += "{:-<150}\n".format("")
@@ -93,21 +96,25 @@ class RWComparator():
     def load_rw_data(self):
         self.rw_data = {}
         for fn in self.rw_filenames:
-            item = load_json(fn)
-            self.rw_data[item.get("RW_document","Rw/unknown")] = {"DWS_documents" : item.get("DWS_documents",[]),
-                                                                "WZ_documents" : item.get("WZ_documents", []), 
-                                                                "items" : item.get("items",[])
+            item = RWComparator.load_json(fn)
+            self.rw_data[item.get("RW_document","Rw/unknown")] = {
+                "DWS_documents" : item.get("DWS_documents",[]),
+                "WZ_documents" : item.get("WZ_documents", []), 
+                "items" : item.get("items",[])
             }
         
 
     def load_wz_data(self):
         self.wz_data = {}
         for fn in self.wz_filenames:
-            item = load_json(fn)
+            item = RWComparator.load_json(fn)
             self.wz_data[item.get("WZ_number","000/00")] = {"DWS_number": item.get("DWS_number",[]), "items" : item.get("items",[])}
 
 
     def generate_WZ_references(self) -> None:
+        """
+        Create dictionary key=WZ number, value = set of corresponding RW numbers
+        """
         self.wz_references = {key: {"checked": False, "items": set()} for key in self.wz_data.keys()} 
         for rw_key, wz_items in self.rw_data.items():
             for wz_num in wz_items["WZ_documents"]:
@@ -118,19 +125,22 @@ class RWComparator():
 
 
     def generate_RW_references(self) -> None:
+        """
+        Create dictionary key=RW number, value = set of corresponding WZ numbers
+        """
         self.rw_references = {key: {"checked": False, "items": set()} for key in self.rw_data.keys()}
         for rw_key, wz_items in self.rw_data.items():
-            for rw_num in wz_items["WZ_documents"]:
-                self.rw_references[rw_key]["items"].add(rw_num)
+            for wz_num in wz_items["WZ_documents"]:
+                self.rw_references[rw_key]["items"].add(wz_num)
 
 
     def get_dependencies(self):
         self.generate_RW_references()
         self.generate_WZ_references()
-        self.references = [self.__aggregate_indexes__(wz) for wz in self.wz_references if not self.wz_references[wz]["checked"]]
+        self.references = [self.aggregate_indexes(wz) for wz in self.wz_references if not self.wz_references[wz]["checked"]]
 
 
-    def __aggregate_indexes__(self, wz_num: str) -> list:
+    def aggregate_indexes(self, wz_num: str) -> list:
         result_WZ_list = [wz_num]
         self.wz_references[wz_num]["checked"] = True
         tmp_RW_set = {rw for rw in self.wz_references[wz_num]["items"] if not self.rw_references[rw]["checked"]}
@@ -139,16 +149,14 @@ class RWComparator():
             self.rw_references[rw]["checked"] = True
             tmp_WZ_set = {wz for wz in self.rw_references[rw]["items"] if not self.wz_references[wz]["checked"]}
             for wz in tmp_WZ_set:
-                [wz_res, rw_res] = self.__aggregate_indexes__(wz)
-                for o_wz in wz_res:
-                    result_WZ_list.append(o_wz)
-                for o_rw in rw_res:
-                    result_RW_list.append(o_rw)
+                [wz_res, rw_res] = self.aggregate_indexes(wz)
+                result_WZ_list.extend(wz_res)
+                result_RW_list.extend(rw_res)
         return [result_WZ_list, result_RW_list]
 
 
     @classmethod
-    def load_json(filename: str) -> dict:
+    def load_json(cls, filename: str) -> dict:
         try:
             with open(filename, "r", encoding="UTF-8") as stream:
                 output = json.load(stream)
@@ -172,52 +180,21 @@ class RWComparator():
             print(f"{k} checked: {v['checked']}")
 
 
+def sort_compared_list(c_list: list) -> list:
+    return sorted(c_list, key=lambda c_obj: c_obj.wz_dict["DWS_numbers"])
 
 
-def load_json(filename: str) -> dict:
-    try:
-        with open(filename, "r", encoding="UTF-8") as stream:
-            output = json.load(stream)
-    except:
-        output = {}
-    return output
-
-
-def get_global_wz_data(wz_files: list) -> dict:
-    result = {}
-    for fn in wz_files:
-        item = load_json(fn)
-        result[item["WZ_number"]] = {"DWS_number": item["DWS_number"], "items" : item["items"]}
-    return result
-
-
-def get_global_rw_data(rw_files: list) -> dict:
-    result = {}
-    for fn in rw_files:
-        item = load_json(fn)
-        result[item["RW_document"]] = {"DWS_documents" : item["DWS_documents"], "WZ_documents" : item["WZ_documents"], "items" : item["items"]}
-    return result
-
-
-def get_RW_to_WZ_reference(rw_data: dict, wz_data: dict) -> dict:
-    wz_dict = {key: {"checked": False, "items": set()} for key in wz_data.keys()} 
-    for k, v in rw_data.items():
-        for wz_num in v["WZ_documents"]:
-            wz_dict[wz_num]["items"].add(k)
-    return wz_dict
-
-
-def get_WZ_to_RW_reference(rw_data: dict, wz_data: dict) -> dict:
-    rw_dict = {key: {"checked": False, "items": set()} for key in rw_data.keys()}
-    for k, v in rw_data.items():
-        for rw_num in v["WZ_documents"]:
-            rw_dict[k]["items"].add(rw_num)
-    return rw_dict
-
-
+@click.command()
 def main():
-    rw_json_list = get_filename_list(RW_JSON_FOLDER, "*.json")
-    wz_json_list = get_filename_list(WZ_JSON_FOLDER, "*.json")
+    """
+    Program porównuje pliki WZ z plikami RW.\n 
+    Przykład:\n
+    >python rwchecker.py     <- wynik porównania wyświetlony na standardowym urządzeniu wyjściowym.\n
+    >python rwchecker.py > plik_wyjściowy.txt    <- wynik porównania zapisany do pliku tekstowego.\n
+    v1.0.0
+    """
+    rw_json_list = get_files(os.path.join(RW_JSON_FOLDER, "*.json"))
+    wz_json_list = get_files(os.path.join(WZ_JSON_FOLDER, "*.json"))
 
     comparator = RWComparator(wz_json_list,rw_json_list)
     comparator.load_rw_data()
@@ -228,22 +205,8 @@ def main():
     # comparator.print_wz_references()
 
     comp = [CompareSet(ref[0], ref[1], comparator.wz_data, comparator.rw_data) for ref in comparator.references]
-    for c in comp:
+    for c in sort_compared_list(comp):
         print(c.compare())
-    # wz_data = get_global_wz_data(wz_json_list)
-    # rw_data = get_global_rw_data(rw_json_list)
-    # wz_index = get_RW_to_WZ_reference(rw_data, wz_data)
-    # rw_index = get_WZ_to_RW_reference(rw_data,wz_data)
-    # for k,v in wz_index.items():
-    #     print(k, ":",v)
-    # json_wzts = json.dumps(wz_data, indent=3)
-    # print(json_wzts)
-    # obj = load_json(wz_json_list[0])
-    # print(obj["WZ_number"])
-    # json_formatted = json.dumps(obj, indent=2)
-    # print(json_formatted)
-
-
 
 
 if __name__ == "__main__":

@@ -1,13 +1,14 @@
 import os
-import xlrd
 import re
+import sys
+
+import click
 from tqdm import tqdm
-from decodetxt2rw import get_json_file_name, save_json
+import xlrd
 
-
-DWS_XLS_FOLDER = "DWS_xls/"
-WZ_JSON_FOLDER = "WZ_json/"
-
+from decodetxt2rw import test_and_touch_dir, get_json_file_name, save_json
+from globals import DWS_XLS_FOLDER, \
+                    WZ_JSON_FOLDER
 
 
 def get_assortment(xls_book: xlrd.book.Book, names_col_number=3, indexes_col_number=12) -> dict:
@@ -18,7 +19,11 @@ def get_assortment(xls_book: xlrd.book.Book, names_col_number=3, indexes_col_num
 
 
 def get_xls_book(xls_file_name: str) -> xlrd.book.Book:
-    return xlrd.open_workbook(xls_file_name)
+    book = xlrd.open_workbook(xls_file_name)
+    if isinstance(book,xlrd.book.Book):
+        return book
+    else:
+        raise xlrd.biffh.XLRDError
 
 
 def get_dws_sheet_list(xls_book: xlrd.book.Book) -> list:
@@ -91,16 +96,39 @@ def get_wz_content(assortment_dict: dict, dws_sheet: xlrd.sheet.Sheet, start_row
     return result
 
 
-def main():
-    print("Reading assortment list...", end="")
-    assortment_book = get_xls_book(os.path.join(DWS_XLS_FOLDER, "Asortyment v1 2022.xls"))
-    assortment_dict = get_assortment(assortment_book)
-    print("done.")
-    print("Reading DWS list...", end="")
-    dws_book = get_xls_book(os.path.join(DWS_XLS_FOLDER, "DWSygn v1 2022.xls"))
-    dws_list = get_dws_sheet_list(dws_book)
-    print("done.")
-    t = tqdm(total=len(dws_list), unit=" DWS", desc="Extracting WZ")
+@click.command()
+@click.argument("assortment-xls-file", nargs=1)
+@click.argument("dws-xls-file", nargs=1)
+def main(assortment_xls_file: str, dws_xls_file: str):
+    """
+    Program rozpakowuje WZty dyspozycji DWSygn do plików w formacie json (do podkatalogu WZ_json/). 
+    Argumenty:\n
+        assortment-xls-file: plik w formacie xls zawierający asortyment DWSygn z przypisanymi indeksami magazynowymi.\n
+        dws-xls-file: plik w formacie xls zawierający dyspozycje DWSygn oraz dokumenty WZ\n
+    Przykład:\n
+    >python decodexls2wz.py "DWS_xls/asortyment.xls" "DWS_xls/DWSygn.xls"\n
+    v1.0.0
+    """
+    print("Wczytanie listy asortymentu...", end="")
+    try:
+        assortment_book = get_xls_book(os.path.join(assortment_xls_file))
+    except Exception as e:
+        print(f"\nBłąd podczas wczytywania listy. {e}")
+        sys.exit(1)
+    else:
+        assortment_dict = get_assortment(assortment_book)
+        print("gotowe.")
+    print("Wczytywanie listy DWSygn...", end="")
+    try:
+        dws_book = get_xls_book(os.path.join(dws_xls_file))
+    except Exception as e:
+        print(f"\nBłąd podczas wczytywania listy. {e}")
+        sys.exit(1)
+    else:
+        dws_list = get_dws_sheet_list(dws_book)
+        print("gotowe.")
+    test_and_touch_dir(WZ_JSON_FOLDER)
+    t = tqdm(total=len(dws_list), unit=" DWS", desc="Rozpakowywanie WZ")
     for dws_name in dws_list:
         dws_sheet = get_dws_sheet(dws_book, dws_name)
         wz_list = [get_wz_content(assortment_dict, dws_sheet, start_row=sr) for sr in get_wz_start(dws_sheet)]

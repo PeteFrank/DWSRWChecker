@@ -1,0 +1,6 @@
+RW_JSON_FOLDER = "RW_json/"
+RW_RAW_INPUT_FOLDER = "RW_jpeg/"
+RW_TEMP_FOLDER = "RW_temp/"
+RW_TXT_FOLDER = "RW_txt/"
+DWS_XLS_FOLDER = "DWS_xls/"
+WZ_JSON_FOLDER = "WZ_json/"

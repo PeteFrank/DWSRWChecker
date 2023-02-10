@@ -1,8 +1,9 @@
 __pycache__/
+.pytest_cache/
 drc_venv/
 working/
 RW_*/
 DWS_xls/
 WZ_*/
 compare_results/
-githubtoken.txt
+*.txt

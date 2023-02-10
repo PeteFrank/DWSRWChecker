@@ -1,25 +1,23 @@
+from concurrent.futures import ThreadPoolExecutor
 import glob
+import os
+
+import click
 import cv2
 import pytesseract
-import os
 from tqdm import tqdm
-from concurrent.futures import ThreadPoolExecutor
 
-
-RW_RAW_INPUT_FOLDER = "RW_jpeg/"
-RW_TEMP_FOLDER = "RW_temp/"
-RW_TXT_FOLDER = "RW_txt/"
-
-
-def get_files(path):
-    return glob.glob(os.path.join(path, "Scan_*.jpg"))
+from decodetxt2rw import get_files, test_and_touch_dir
+from globals import RW_RAW_INPUT_FOLDER, \
+                    RW_TEMP_FOLDER, \
+                    RW_TXT_FOLDER
 
 
 def read_raw_file(filename: str):
     try:
         return cv2.imread(filename)
     except FileNotFoundError:
-        print("File" + filename + "not found.")
+        print("Plik" + filename + "nie został znaleziony.")
         return None
 
 
@@ -52,16 +50,6 @@ def make_txt(image):
     return pytesseract.image_to_string(image, config=custom_config)
 
 
-def make_data(image):
-    custom_config = r"--oem 3 --psm 6 -l pol+osd"
-    return pytesseract.image_to_data(image, config=custom_config, output_type=pytesseract.Output.DICT)
-
-
-def make_xml(image):
-    custom_config = r"--oem 3 --psm 6 -l pol+osd"
-    return pytesseract.image_to_alto_xml(image, config=custom_config)
-
-
 def get_result_name(filename: str):
     f_name = filename.rsplit('/', maxsplit=1)[1]
     return f_name.rsplit('.', maxsplit=1)[0]
@@ -70,7 +58,7 @@ def get_result_name(filename: str):
 def process_image(filename: str):
     image = read_raw_file(filename)
     if image is None:
-        print("There is a problem with image file", filename)
+        print("Wystąpił problem z plikiem obrazu ", filename)
         return
     grey = get_greyscale(image)
     thresh = thresholding_inv(grey)
@@ -78,18 +66,33 @@ def process_image(filename: str):
     img = thresholding_inv(img)
     text = make_txt(img)
     result_fn = get_result_name(filename)
-    # tmp_filename = RW_TEMP_FOLDER + result_fn
-    # cv2.imwrite(tmp_filename + "img.jpg", img)
-    # cv2.imwrite(tmp_filename + "thresh.jpg", thresh)
     txt_filename = os.path.join(RW_TXT_FOLDER, result_fn + ".txt")
-    with open(txt_filename, 'w') as stream:
+    with open(txt_filename, 'w', encoding="utf-8") as stream:
         stream.write(text)
 
-def main():
-    input_files = get_files(RW_RAW_INPUT_FOLDER)
+@click.command()
+@click.argument("filenames", nargs=-1, required=False)
+def main(filenames: list):
+    """
+    Program przetwarza zeskanowane pliki RW w formacie jpg do plików tekstowych.\n
+    Gdy wywołany bez argumentów, przetwarza wszystkie pliki jpg z podkatalogu RW_jpeg a pliki wynikowe zapisuje w podkatalogu RW_txt.
+    Jako argumenty wywołania wprowadza się nazwy plików do przetwarzania.\n
+    Przykład:\n
+    >python rwimage2txt.py       <- przetwarza wszystkie pliki\n
+    >python rwimage2txt.py RW_jpeg/Scan_0001.jpg   <- przetwarza tylko konkretny plik.\n
+    v1.0.0
+    """
+    if len(filenames) > 0:
+        input_files = []
+        for filename in filenames:
+            input_files.extend(get_files(filename))
+    else:
+        test_and_touch_dir(RW_RAW_INPUT_FOLDER)
+        input_files = get_files(os.path.join(RW_RAW_INPUT_FOLDER, "*.jp*g"))
+    test_and_touch_dir(RW_TXT_FOLDER)
     with ThreadPoolExecutor(max_workers=2) as pool:
-        list(tqdm(pool.map(process_image, input_files), total=len(input_files), desc="Images processing", unit="image")) 
-    print("Finished.")
+        list(tqdm(pool.map(process_image, input_files), total=len(input_files), desc="Przetwarzanie obrazu", unit="obraz")) 
+    print("Zakończono.")
 
 
 if __name__ == "__main__":
