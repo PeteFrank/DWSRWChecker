@@ -16,9 +16,9 @@ processing whole jpeg files from ./RW_jpeg/ directory:
 >python rwimage2txt.py
 
 processing single or list of jpeg files:
-    >python rwimage2txt.py RW_jpeg/Scan_0001.jpg
-    or
-    >python rwimage2txt.py RW_jpeg/Scan_*.jpg
+>python rwimage2txt.py RW_jpeg/Scan_0001.jpg
+or
+>python rwimage2txt.py RW_jpeg/Scan_*.jpg
 
 # decodetxt2rw.py
 Script process text files created by rwimage2txt.py script using regular expressions. Results of this process are saved to files  containing json formatted RW data. Output directory is ./RW_json/
@@ -26,9 +26,9 @@ Script process text files created by rwimage2txt.py script using regular express
 Usage example:
 
 processing whole files from ./RW_txt/ directory and print report if --report or -r option is used:
-    >python decodetxt2rw.py
-    or
-    >python decodetxt2rw.py --report
+>python decodetxt2rw.py
+or
+>python decodetxt2rw.py --report
 
 processing single or list of .txt files from specified directory and print report if --report or -r option is used:
     >python rwimage2txt.py -r RW_txt/Scan_0001.txt
@@ -38,7 +38,7 @@ processing single or list of .txt files from specified directory and print repor
 Script exctracts WZ data from excel workbook containing set of WZ documents. Another excel workbook cantaining assortment list is used for indexing purposes. Results of this process are saved to files containing json formatted WZ data. Output directory is ./WZ_json/
 
 Usage example:
-    >python decodexls2wz.py "DWS_xls/asortyment.xls" "DWS_xls/DWSygn.xls
+>python decodexls2wz.py "DWS_xls/asortyment.xls" "DWS_xls/DWSygn.xls
 
 
 # rwchecker.py
@@ -46,6 +46,6 @@ Main script for checking and verifying of set of WZ and RW documents. Script use
 
 Usage example:
 results sent to stdout:
-    >python rwchecker.py
+>python rwchecker.py
 results sent to output_file.txt     
-    >python rwchecker.py > output_file.txt
+>python rwchecker.py > output_file.txt
