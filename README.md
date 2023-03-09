@@ -27,11 +27,12 @@ Usage example:
 
 processing whole files from ./RW_txt/ directory and print report if --report or -r option is used:
 >python decodetxt2rw.py
+
 or
 >python decodetxt2rw.py --report
 
 processing single or list of .txt files from specified directory and print report if --report or -r option is used:
-    >python rwimage2txt.py -r RW_txt/Scan_0001.txt
+>python rwimage2txt.py -r RW_txt/Scan_0001.txt
 
 
 # decodexls2wz.py
@@ -47,5 +48,6 @@ Main script for checking and verifying of set of WZ and RW documents. Script use
 Usage example:
 results sent to stdout:
 >python rwchecker.py
+
 results sent to output_file.txt     
 >python rwchecker.py > output_file.txt
