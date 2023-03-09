@@ -11,16 +11,10 @@ from globals import RW_TXT_FOLDER,\
 
 
 PATTERN_RW = r"RW/U\d+/2[0-9]"
-# PATTERN_DWS = r"DWS\s?\d\d\d/2[0-9]"
 PATTERN_DWS = r"(?<=DWS)\s?\d\d\d/2[0-9]"
-# PATTERN_WZ = r"WZ\s?\d\d\d/\d\d/2[0-9]/6"
 PATTERN_WZ = r"(?<=WZ)\s?\d\d\d/\d\d/2[0-9]/6"
-# PATTERN_INDEX = r"\d\d\d\d\sJ?"
-# PATTERN_INDEX = r"[0-9]{3,4}(?=\sJ|\s[A-Z]{4,})"
 PATTERN_INDEX = r"[0-9]{4}\s"
 PATTERN_COUNT = r"\d+\s?SZT"
-# PATTERN_PRIZES = r"[0-9]+[\.,][0-9]+\s[0-9]*.*[0-9]+[\.,][0-9]+"
-PATTERN_PRIZES = r"[0-9]*\s*[0-9]+[\.,][0-9][0-9]"
 
 
 def get_files(path: str) -> list:
@@ -61,7 +55,6 @@ def decode_rw_number(source: str) -> str:
 def decode_dws_numbers(source: str) -> list[str]:
     dws = re.findall(PATTERN_DWS, source, re.IGNORECASE)
     try:
-        # return [re.findall(r"\d\d\d/22", tmp_item)[0] for tmp_item in tmp]
         return [dws_item.lstrip().upper() for dws_item in dws]
     except IndexError:
         return []
@@ -70,14 +63,12 @@ def decode_dws_numbers(source: str) -> list[str]:
 def decode_wz_numbers(source: str) -> list[str]:
     wz = re.findall(PATTERN_WZ, source, re.IGNORECASE)
     try:
-        # return [re.findall(r"\d+/\d\d/22/6", tmp_item)[0] for tmp_item in tmp]
         return[wz_item.lstrip().upper() for wz_item in wz]    
     except IndexError:
         return []
 
 
 def is_index(source_line: str) -> bool:
-    # return len(re.findall(PATTERN_INDEX, source_line)) > 0
     return re.search(PATTERN_INDEX, source_line) is not None
 
 
@@ -115,24 +106,10 @@ def get_count(source_line: str) -> int:
         return 0
     
 
-def get_prizes(source_line: str) -> list[float, float]:
-    try:
-        prizes_list = re.findall(PATTERN_PRIZES, source_line)
-        if len(prizes_list) == 2:
-           return [get_numeric_float(n) for n in prizes_list]
-        else:
-            return [1, 0]
-    except IndexError or ValueError:
-        return [1, 0]
-
-
 def decode_item(source_line: str) -> dict:
     item = {}
     item["index"] = get_index(source_line)
     item["quantity"] = get_count(source_line)
-    # item["prizes"] = get_prizes(source_line)
-    # item["quantity_by_prizes"] = item["prizes"][1] / item["prizes"][0]
-    # item["verified"] = item["quantity"] == item["quantity_by_prizes"]
     return item
 
 
@@ -141,7 +118,6 @@ def compose_rw(rw_raw_text: str) -> dict:
     rw_item["RW_document"] = decode_rw_number(rw_raw_text)
     rw_item["DWS_documents"] = decode_dws_numbers(rw_raw_text)
     rw_item["WZ_documents"] = decode_wz_numbers(rw_raw_text)
-    # rw_item["items"] = [decode_item(line) for line in rw_raw_text.splitlines() if is_index(line)]
     rw_item["items"] = [decode_item(line) for line in item_lines_generator(rw_raw_text)]
     return rw_item
 

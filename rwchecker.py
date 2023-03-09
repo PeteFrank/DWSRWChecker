@@ -200,9 +200,6 @@ def main():
     comparator.load_rw_data()
     comparator.load_wz_data()
     comparator.get_dependencies()
-    # comparator.print_references()
-    # comparator.print_rw_references()
-    # comparator.print_wz_references()
 
     comp = [CompareSet(ref[0], ref[1], comparator.wz_data, comparator.rw_data) for ref in comparator.references]
     for c in sort_compared_list(comp):

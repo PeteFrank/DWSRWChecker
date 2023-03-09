@@ -7,8 +7,7 @@ from tqdm import tqdm
 import xlrd
 
 from decodetxt2rw import test_and_touch_dir, get_json_file_name, save_json
-from globals import DWS_XLS_FOLDER, \
-                    WZ_JSON_FOLDER
+from globals import WZ_JSON_FOLDER
 
 
 def get_assortment(xls_book: xlrd.book.Book, names_col_number=3, indexes_col_number=12) -> dict:

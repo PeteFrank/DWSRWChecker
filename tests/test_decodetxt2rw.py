@@ -1,9 +1,5 @@
 import pytest
 
-# import sys, os
-# myPath = os.path.dirname(os.path.abspath(__file__))
-# sys.path.insert(0,myPath + '/../')
-
 import decodetxt2rw as dt2rw
 
 
@@ -63,14 +59,3 @@ def test_get_index(input, expected):
 ])
 def test_get_count(input, expected):
     assert dt2rw.get_count(input) == expected
-
-
-@pytest.mark.parametrize("input, expected", [
-    ('—”) 1815 J00072PODK LATARNIA MONDIAL FUTURLED3 3x300 230V R-Y-G OGÓL 4 SZT 775.00 3 100.00', [775.00, 3100.00]),
-    ('—”) 1815 J00072PODK LATARNIA MONDIAL FUTURLED3 3x300 230V R-Y-G OGÓL 4 SZT 775.00 3 100,00', [775.00, 3100.00]),
-    ("2167 J00171ANOD PŁYTA PW-95 2 SZT 24.60 49.20", [24.60, 49.20]),
-    ("m. 2160 UCHWYT UW-108,CYBANT M12x108x149 gwint 50 oci2um 4SZT 5.83 23.32", [5.83, 23.32]),
-    ("- 2405 LISTWA LPC-FUT-2*200-595-496 123 SZT 14.00 14,00", [14.00, 14.00]),
-])
-def test_get_prizes(input, expected):
-    assert dt2rw.get_prizes(input) == expected

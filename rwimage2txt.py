@@ -1,5 +1,4 @@
 from concurrent.futures import ThreadPoolExecutor
-import glob
 import os
 
 import click
@@ -9,7 +8,6 @@ from tqdm import tqdm
 
 from decodetxt2rw import get_files, test_and_touch_dir
 from globals import RW_RAW_INPUT_FOLDER, \
-                    RW_TEMP_FOLDER, \
                     RW_TXT_FOLDER
 
 
@@ -40,7 +38,6 @@ def remove_horizontal(image, thresh):
     cnts = cv2.findContours(detected_lines, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     cnts = cnts[0] if len(cnts) == 2 else cnts[1]
     for c in cnts:
-        # cv2.drawContours(image, [c], -1, (255, 255, 255), 2)
         cv2.drawContours(img, [c], -1, (0, 0, 0), 6)
     return img
 
